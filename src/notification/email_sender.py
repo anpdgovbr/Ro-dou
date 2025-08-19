@@ -31,22 +31,31 @@ class EmailSender(ISender):
         self.report_config = report_config
         self.search_report: list = []
         # mantém o watermark do upstream (com a marca institucional)
-        self.watermark = """
-            <div class="footer" style="margin-top:24px;">
-                <a href="https://www.gov.br/gestao/pt-br/assuntos/gestaoeinovacao/ro-dou">
-                    <img src="https://www.gov.br/gestao/pt-br/assuntos/gestaoeinovacao/ro-dou/ro-dou/@@govbr.institucional.banner/b27393f0-d00b-4459-8c99-f4f084eb2432/@@images/ecce877d-c42d-4ab6-ad9b-d24073ab5063.png"
-                         alt="Ro-DOU" width="250">
-                </a>
-                <small>Esta pesquisa foi realizada automaticamente pelo
-                    <a href="https://gestaogovbr.github.io/Ro-dou/">&copy; Ro-DOU</a>
-                </small>
-            </div>
-        """
+        # usa flexbox para centralizar vertical e horizontalmente e ficar em uma
+        # linha quando houver espaço (flex-wrap permite quebra quando necessário)
+        self.watermark = (
+            '<div class="footer" '
+            'style="display:flex;align-items:center;justify-content:center;flex-wrap:wrap;padding-top:8px;">'
+            '<div style="display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;">'
+            '<a href="https://www.gov.br/gestao/pt-br/assuntos/gestaoeinovacao/ro-dou" '
+            'style="display:inline-block;">'
+            '<img src="https://www.gov.br/gestao/pt-br/assuntos/gestaoeinovacao/ro-dou/ro-dou/@@govbr.institucional.banner/'
+            'b27393f0-d00b-4459-8c99-f4f084eb2432/@@images/ecce877d-c42d-4ab6-ad9b-d24073ab5063.png" '
+            'alt="Ro-DOU" style="width:180px;max-height:60px;display:block;">'
+            '</a>'
+            '<div style="max-width:720px;text-align:center;font-size:12px;color:#777;">'
+            'Esta pesquisa foi realizada automaticamente pela ferramenta '
+            '<a href="https://gestaogovbr.github.io/Ro-dou/" target="_blank">Ro-DOU</a>, '
+            'adaptada e operada pela DDSS/CGTI/ANPD.'
+            '</div>'
+            '</div>'
+            '</div>'
+        )
 
     # -----------------------------
     # envio principal
     # -----------------------------
-    def send(self, search_report: list, report_date: str):
+    def send(self, search_report: list, report_date: str) -> str | None:
         """Build the email content (+ optional CSV) and send it."""
         self.search_report = search_report
         full_subject = f"{self.report_config.subject} - DOs de {report_date}"
@@ -61,7 +70,7 @@ class EmailSender(ISender):
                 break
 
         if skip_notification and self.report_config.skip_null:
-            return "skip_notification"
+            return "skip_notification" 
 
         # conteúdo de e-mail
         content = (
@@ -94,8 +103,7 @@ class EmailSender(ISender):
     # -----------------------------
     def generate_email_content(self) -> str:
         """Generate HTML content to be sent by email based on search_report dictionary."""
-        current_directory = os.path.dirname(__file__)
-        parent_directory = os.path.dirname(current_directory)
+        parent_directory = os.path.dirname(os.path.dirname(__file__))
 
         # CSS do e-mail
         file_path = os.path.join(parent_directory, "report_style.css")
