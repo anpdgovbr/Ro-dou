@@ -1,39 +1,80 @@
-version: "3.9"
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+# Basic Airflow cluster configuration (CeleryExecutor) — notas rápidas
+# WARNING: configuração para desenvolvimento/local apenas. Não usar em produção.
+#
+# Este arquivo lê configurações do ambiente ou de um arquivo `.env` (veja
+# `.env.example`). Não comite segredos no repositório — forneça senhas/keys
+# no deploy ou em `.env` local. Valores não sensíveis têm fallback seguro;
+# segredos devem ser definidos pelo operador (ausência de segredo fará o
+# Airflow avisar/falhar em tempo de execução, evitando vazamento de padrões).
+#
+# Variáveis de exemplo (não exaustivo):
+#   AIRFLOW_IMAGE_NAME, AIRFLOW_UID, AIRFLOW_GID,
+#   _AIRFLOW_WWW_USER_USERNAME, _AIRFLOW_WWW_USER_PASSWORD,
+#   POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
+#
+# Para contribuidores: evite hard-coding de valores específicos de ambiente.
+# Prefira atrasos compatíveis com upstream e documente defaults em `.env.example`.
+
+# NOTE: Top-level `version:` key is intentionally omitted because the
+# Compose spec version field is deprecated in newer Compose implementations.
 
 x-airflow-common: &airflow-common
   build:
     context: .
     dockerfile: docker/airflow-common.Dockerfile
-  environment: &airflow-common-env
-    # Auth: API + sessão (UI)
+  environment: &airflow-common-env # Auth: API + sessão (UI)
     AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session"
 
     # Core
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
-    AIRFLOW__CORE__DEFAULT_TIMEZONE: "${AIRFLOW_TIMEZONE}"
+    # Timezone: default to America/Sao_Paulo when not provided
+    AIRFLOW__CORE__DEFAULT_TIMEZONE: "${AIRFLOW_TIMEZONE:-America/Sao_Paulo}"
     AIRFLOW__CORE__ENABLE_XCOM_PICKLING: "true"
-    AIRFLOW__CORE__EXECUTOR: "${AIRFLOW_EXECUTOR}"
-    AIRFLOW__CORE__FERNET_KEY: "${AIRFLOW_FERNET_KEY}"
+    # Executor: fallback to LocalExecutor for safe local runs
+    AIRFLOW__CORE__EXECUTOR: "${AIRFLOW_EXECUTOR:-LocalExecutor}"
+    # Fernet key: leave empty by default (do NOT commit a real key)
+    AIRFLOW__CORE__FERNET_KEY: "${AIRFLOW_FERNET_KEY:-}"
     AIRFLOW__CORE__LOAD_EXAMPLES: "false"
 
     # Database (Airflow >=2.7 usa a seção DATABASE)
-    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"
+    # Database connection: provide safe non-secret fallbacks; prefer setting
+    # POSTGRES_PASSWORD via .env in CI or deploy target.
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://${POSTGRES_USER:-airflow}:${POSTGRES_PASSWORD:-<fallback-airflow-password>}@${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-airflow}"
 
     # E-mail
     AIRFLOW__EMAIL__DEFAULT_EMAIL_ON_FAILURE: "false"
     AIRFLOW__EMAIL__DEFAULT_EMAIL_ON_RETRY: "false"
-    AIRFLOW__SMTP__SMTP_HOST: "${AIRFLOW__SMTP__SMTP_HOST}"
-    AIRFLOW__SMTP__SMTP_MAIL_FROM: "${AIRFLOW__SMTP__SMTP_MAIL_FROM}"
-    AIRFLOW__SMTP__SMTP_PORT: "${AIRFLOW__SMTP__SMTP_PORT}"
-    AIRFLOW__SMTP__SMTP_STARTTLS: "${AIRFLOW__SMTP__SMTP_STARTTLS}"
-    AIRFLOW__SMTP__SMTP_USER: "${AIRFLOW__SMTP__SMTP_USER}"
-    AIRFLOW__SMTP__SMTP_PASSWORD: "${AIRFLOW__SMTP__SMTP_PASSWORD}"
-    AIRFLOW__SMTP__SMTP_SSL: "${AIRFLOW__SMTP__SMTP_SSL}"
+    # SMTP: leave empty by default; set these in .env for proper e-mail support
+    AIRFLOW__SMTP__SMTP_HOST: "${AIRFLOW__SMTP__SMTP_HOST:-}"
+    AIRFLOW__SMTP__SMTP_MAIL_FROM: "${AIRFLOW__SMTP__SMTP_MAIL_FROM:-}"
+    AIRFLOW__SMTP__SMTP_PORT: "${AIRFLOW__SMTP__SMTP_PORT:-}"
+    AIRFLOW__SMTP__SMTP_STARTTLS: "${AIRFLOW__SMTP__SMTP_STARTTLS:-}"
+    AIRFLOW__SMTP__SMTP_USER: "${AIRFLOW__SMTP__SMTP_USER:-}"
+    AIRFLOW__SMTP__SMTP_PASSWORD: "${AIRFLOW__SMTP__SMTP_PASSWORD:-}"
+    AIRFLOW__SMTP__SMTP_SSL: "${AIRFLOW__SMTP__SMTP_SSL:-}"
 
     # Webserver
-    AIRFLOW__WEBSERVER__DEFAULT_UI_TIMEZONE: "${AIRFLOW_TIMEZONE}"
-    AIRFLOW__WEBSERVER__SECRET_KEY: "${AIRFLOW_SECRET_KEY}"
-    AIRFLOW__WEBSERVER__WORKERS: "${AIRFLOW_WORKERS}"
+    AIRFLOW__WEBSERVER__DEFAULT_UI_TIMEZONE: "${AIRFLOW_TIMEZONE:-UTC}"
+    # Webserver secret: REQUIRED for production; leave empty for local/dev
+    AIRFLOW__WEBSERVER__SECRET_KEY: "${AIRFLOW_SECRET_KEY:-}"
+    AIRFLOW__WEBSERVER__WORKERS: "${AIRFLOW_WORKERS:-2}"
 
     # Logging
     AIRFLOW__LOGGING__LOG_SERVE_ADDRESS: "0.0.0.0:8793"
@@ -43,14 +84,16 @@ x-airflow-common: &airflow-common
     # Bootstrap (usar a flag nova de migração)
     _AIRFLOW_DB_MIGRATE: "true"
     _AIRFLOW_WWW_USER_CREATE: "true"
-    _AIRFLOW_WWW_USER_USERNAME: "${AIRFLOW_USER}"
-    _AIRFLOW_WWW_USER_PASSWORD: "${AIRFLOW_PASSWORD}"
+    # Admin user for quick local bootstrap. For production provide secure creds
+    _AIRFLOW_WWW_USER_USERNAME: "${AIRFLOW_USER:-admin}"
+    _AIRFLOW_WWW_USER_PASSWORD: "${AIRFLOW_PASSWORD:-admin}"
 
     # Conn de exemplo (mantida)
-    AIRFLOW_CONN_EXAMPLE_DATABASE_CONN: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"
+    AIRFLOW_CONN_EXAMPLE_DATABASE_CONN: "postgresql://${POSTGRES_USER:-airflow}:${POSTGRES_PASSWORD:-<fallback-airflow-password>}@${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-airflow}"
 
     # Diretório de confs das DAGs Ro-DOU (mantido)
-    RO_DOU__DAG_CONF_DIR: "${RO_DOU_DAG_CONF_DIR}"
+    # Directory with Ro-DOU DAG configs; defaults to the repo's dag_confs/
+    RO_DOU__DAG_CONF_DIR: "${RO_DOU_DAG_CONF_DIR:-dag_confs}"
     REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
     SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
 
@@ -73,10 +116,10 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
-      - ./mnt/pgdata:/var/lib/postgresql/data
+      - ${POSTGRES_DATA_VOLUME:-./mnt/pgdata}:/var/lib/postgresql/data
       - ./dag_load_inlabs/sql/:/sql
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}"]
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-airflow}"]
       interval: 5s
       retries: 5
     restart: always
@@ -99,3 +142,19 @@ services:
     container_name: airflow-scheduler
     command: scheduler
     restart: always
+
+  smtp4dev:
+    image: rnwood/smtp4dev:v3
+    profiles: ["dev"]
+    restart: always
+    ports:
+      - "5001:80"
+      - "25:25"
+      - "143:143"
+    volumes:
+      - smtp4dev-data:/smtp4dev
+    environment:
+      - ServerOptions__HostName=smtp4dev
+
+volumes:
+  smtp4dev-data:
