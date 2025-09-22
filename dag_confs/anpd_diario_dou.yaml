@@ -12,7 +12,7 @@ dag:
     - header: Pesquisa ANPD no DOU - Teste de Implantação - SOURCE=DOU
       terms:
         - anpd
-        - 'autoridade nacional de proteção de dados'
+        - 'agência nacional de proteção de dados'
       sources:
         - DOU
       field: TUDO
@@ -58,7 +58,7 @@ dag:
             <img src="https://www.gov.br/anpd/pt-br/anpd-rodou-340x111.png" alt="Logotipo ANPD" width="240" style="display: block;" />
           </td>
           <td style="vertical-align: middle;">
-            <h2 style="margin: 0; font-size: 18px; color: #004b76;">Autoridade Nacional de Proteção de Dados</h2>
+            <h2 style="margin: 0; font-size: 18px; color: #004b76;">Agência Nacional de Proteção de Dados</h2>
             <small style="color: #555;">Clipping diário de publicações oficiais da ANPD e CNPD no DOU</small>
           </td>
         </tr>
@@ -86,7 +86,7 @@ dag:
             <img src="https://www.gov.br/anpd/pt-br/anpd-rodou-340x111.png" alt="Logotipo ANPD" width="240" style="display: block;" />
           </td>
           <td style="vertical-align: middle;">
-            <h2 style="margin: 0; font-size: 18px; color: #004b76;">Autoridade Nacional de Proteção de Dados</h2>
+            <h2 style="margin: 0; font-size: 18px; color: #004b76;">Agência Nacional de Proteção de Dados</h2>
             <small style="color: #555;">Clipping diário de publicações oficiais da ANPD e CNPD no DOU</small>
           </td>
         </tr>
