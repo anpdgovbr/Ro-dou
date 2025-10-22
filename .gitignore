@@ -139,3 +139,4 @@ test_notrack/
 dags/airflow-mantainance/db-bkp
 **/mnt/pgdata/
 **/mnt/airflow-logs
+/dag_confs/teste_funcionamento.yaml
