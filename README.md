@@ -29,6 +29,11 @@ Esta cópia é mantida pela ANPD com adaptações operacionais para ambientes in
 
 > Consulte `CHANGELOG.md` para o histórico completo de releases.
 
+### Diferenças em relação ao upstream
+- Mantemos apenas DAGs e configurações voltadas à ANPD; os exemplos genéricos em `dag_confs/examples_and_tests/` seguem de fora para simplificar manutenção.
+- Artefatos de deploy em Kubernetes (`k8s/`) e pipelines de publicação Docker/GitHub Pages não fazem parte deste fork, já que o fluxo oficial roda em ambientes controlados próprios.
+- A suíte de testes automatizados do upstream não é executada aqui; os ajustes passam por verificação manual em ambiente de desenvolvimento dedicado.
+- Dependências opcionais que causavam falhas (por exemplo, providers MSSQL ausentes) permanecem protegidas — recursos só são habilitados quando necessários ao nosso fluxo.
 
 ## Links úteis
 - Documentação do projeto: https://gestaogovbr.github.io/Ro-dou/
@@ -38,4 +43,3 @@ Esta cópia é mantida pela ANPD com adaptações operacionais para ambientes in
 ---
 
 Posso commitar e dar push desta versão consolidada do `README.md` (usa uma mensagem padrão `docs: consolidar README e adicionar badges`) ou aplicar outra mensagem — diga qual prefere.
-

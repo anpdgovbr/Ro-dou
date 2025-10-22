@@ -134,6 +134,11 @@ class SearchConfig(BaseModel):
         "ao invés de um resumo. Valores: True ou False. Default: False. "
         "(Funcionalidade disponível apenas no INLABS)",
     )
+    text_length: Optional[int] = Field(
+        default=400,
+        description="Tamanho do texto que será retornado na mensagem. "
+        "(Funcionalidade disponível apenas no INLABS)",
+    )
     use_summary: Optional[bool] = Field(
         default=False,
         description="Define se no relatório será exibido a ementa, se existir. "

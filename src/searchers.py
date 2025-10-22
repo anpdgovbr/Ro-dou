@@ -11,7 +11,7 @@ import os
 from abc import ABC
 from datetime import datetime, timedelta
 from random import random
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 import string
 import pandas as pd
 import requests
@@ -497,6 +497,7 @@ class INLABSSearcher(BaseSearcher):
         department_ignore: List[str],
         ignore_signature_match: bool,
         full_text: bool,
+        text_length: Optional[int],
         use_summary: bool,
         pubtype: List[str],
         reference_date: datetime = datetime.now(),
@@ -517,6 +518,7 @@ class INLABSSearcher(BaseSearcher):
             ignore_signature_match (bool): Flag to ignore publication
                 signature content.
             full_text (bool): If trim result text content
+            text_length (int, optional): Size of the text to be sent in the message. The default is 400.
             use_summary (bool): If exists, use summary as excerpt or full text
             pubtype (List[str]): List of publication types to filter the search.
             reference_date (datetime, optional): Reference date for the
@@ -533,7 +535,7 @@ class INLABSSearcher(BaseSearcher):
         )
 
         search_results = inlabs_hook.search_text(
-            search_terms, ignore_signature_match, full_text, use_summary
+            search_terms, ignore_signature_match, full_text, text_length, use_summary
         )
 
         group_results = self._group_results(search_results, terms, department)

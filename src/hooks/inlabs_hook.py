@@ -5,8 +5,9 @@ import re
 import logging
 from datetime import datetime, timedelta, date
 import unicodedata
-import pandas as pd
 import html2text
+import pandas as pd
+from typing import Optional
 
 from airflow.hooks.base import BaseHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
@@ -55,6 +56,7 @@ class INLABSHook(BaseHook):
         search_terms: dict,
         ignore_signature_match: bool,
         full_text: bool,
+        text_length: Optional[int],
         use_summary: bool,
         conn_id: str = CONN_ID,
     ) -> dict:
@@ -67,6 +69,7 @@ class INLABSHook(BaseHook):
             ignore_signature_match (bool): Flag to ignore publication
                 signature content.
             full_text (bool): If trim result text content
+            text_length (int, optional): Size of the text to be sent in the message. The default is 400.
             use_summary (bool): If exists, use summary as excerpt or full text
             conn_id (str): DOU Database Airflow conn id
 
@@ -94,7 +97,12 @@ class INLABSHook(BaseHook):
         filtered_text_terms = self._filter_text_terms(search_terms["texto"])
         return (
             self.TextDictHandler().transform_search_results(
-                all_results, filtered_text_terms, ignore_signature_match, full_text, use_summary
+                all_results,
+                filtered_text_terms,
+                ignore_signature_match,
+                full_text,
+                text_length,
+                use_summary,
             )
             if not all_results.empty
             else {}
@@ -268,6 +276,7 @@ class INLABSHook(BaseHook):
             text_terms: list,
             ignore_signature_match: bool,
             full_text: bool = False,
+            text_length: Optional[int] = 400,
             use_summary: bool = False,
         ) -> dict:
             """Transforms and sorts the search results based on the presence
@@ -281,6 +290,8 @@ class INLABSHook(BaseHook):
                     signature content.
                 full_text (bool):  If trim result text content.
                     Defaults to False.
+                text_length (int, optional): Size of the text to be sent in the message.
+                    Defaults to 400.
                 use_summary (bool): If exists, use summary instead of
                     excerpt or full text.
                     Defaults to False
@@ -324,7 +335,7 @@ class INLABSHook(BaseHook):
                 df["matches"] = ""
 
             if not full_text:
-                df["texto"] = df["texto"].apply(self._trim_text)
+                df["texto"] = df["texto"].apply(self._trim_text, text_length=text_length)
 
             if use_summary:
                 # If use_summary replace texto value by summary value
@@ -450,17 +461,26 @@ class INLABSHook(BaseHook):
             return highlighted_text
 
         @staticmethod
-        def _trim_text(text: str) -> str:
-            """Get a len(x) string and returns len(400) keeping `<%%>`
-            at the center.
-            """
+        def _trim_text(text: str, text_length: Optional[int] = 400) -> str:
+            """Truncates text keeping the `<%%>` marker centered when present."""
+
+            if text_length is False or text_length is None or text_length <= 0:
+                text_length = 400
 
             parts = text.split("<%%>", 1)
-            return (
-                "(...) " + parts[0][-200:] + "<%%>" + parts[1][:200] + " (...)"
-                if len(parts) > 1
-                else text[:400] + " (...)"
-            )
+            if len(parts) > 1:
+                half = max(text_length // 2, 1)
+                before_full, after_full = parts
+
+                before = before_full[-half:]
+                after = after_full[:half].rstrip()
+
+                prefix = "(...) " if len(before_full) > half else ""
+                suffix = " (...)" if len(after_full) > half else ""
+
+                return f"{prefix}{before}<%%>{after}{suffix}"
+
+            return f"{text[:text_length].rstrip()} (...)"
 
         @staticmethod
         def _group_to_dict(df: pd.DataFrame, group_column: str, cols: list) -> dict:
