@@ -21,25 +21,6 @@ DEV_PROFILE_ARG := $(if $(DEV_PROFILE),--profile $(DEV_PROFILE),)
 ifeq (, $(shell command -v docker)) 
 $(error "docker não encontrado. Instale o Docker e tente novamente.")
 endif
-include .env
-export $(shell sed 's/=.*//' .env)
-
-# Detect docker compose command (docker-compose or "docker compose")
-COMPOSE := $(shell command -v docker-compose >/dev/null 2>&1 && echo docker-compose || echo docker compose)
-
-# Nome do projeto Docker Compose. Primeiro respeita a variável de ambiente
-# COMPOSE_PROJECT_NAME (se definida). Caso contrário, usa o nome padrão 'ro-dou'.
-# Usa condicionais make para garantir que PROJECT nunca fique vazio.
-PROJECT ?= $(if $(COMPOSE_PROJECT_NAME),$(COMPOSE_PROJECT_NAME),ro-dou)
-
-# Timeout (seconds) for wait-web loop; can be overridden in environment
-WAIT_WEB_TIMEOUT ?= 60
-
-# Ensure docker is installed early
-ifeq (, $(shell command -v docker))
-$(error "docker não encontrado. Instale o Docker e tente novamente.")
-endif
-
 # Automatically choose Postgres data volume strategy:
 # - If running under WSL with repo mounted under /mnt (Windows), default to a named volume
 #   to avoid NTFS permission issues (chown/chmod failing on host bind mounts).
@@ -156,13 +137,6 @@ activate-inlabs-load-dag:
 			}' > /dev/null;"
 .PHONY: redeploy
 redeploy: build-images
-	docker compose -p ro-dou up -d --no-deps airflow-webserver airflow-scheduler
-	$(MAKE) smoke-test
-
-.PHONY: redeploy
-
-
-redeploy: build-images
 	$(COMPOSE) $(DEV_PROFILE_ARG) -p $(PROJECT) up -d --no-deps airflow-webserver airflow-scheduler
 	$(MAKE) smoke-test
 
@@ -215,17 +189,3 @@ smtp4dev-rm:
 down:
 	$(COMPOSE) $(DEV_PROFILE_ARG) -p $(PROJECT) down
 
-.PHONY: smoke-test
-smoke-test:
-	@docker exec airflow-webserver bash -lc "python -c 'import requests; print(\"webserver https://www.in.gov.br ->\", requests.get(\"https://www.in.gov.br\", timeout=10).status_code)'"
-	@docker exec airflow-scheduler bash -lc "python -c 'import requests; print(\"scheduler https://www.in.gov.br ->\", requests.get(\"https://www.in.gov.br\", timeout=10).status_code)'"
-
-.PHONY: wait-web
-wait-web:
-	@echo "Waiting for airflow-webserver (health=healthy) ..."
-	@for i in $$(seq 1 60); do \
-	  state=$$(docker inspect --format='{{.State.Health.Status}}' airflow-webserver 2>/dev/null || echo "starting"); \
-	  if [ "$$state" = "healthy" ]; then echo "airflow-webserver is healthy"; exit 0; fi; \
-	  sleep 3; \
-	done; \
-	echo "Timeout waiting for airflow-webserver health=healthy"; exit 1

@@ -50,6 +50,10 @@ COPY --chown=airflow:root tests-requirements.txt /tests-requirements.txt
 
 # Evita warnings do pip quando rodar como root durante o build
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_ROOT_USER_ACTION=ignore
+# Usa constraints oficiais do Airflow para evitar conflitos (ex.: boto3/botocore)
+ARG AIRFLOW_VERSION=2.9.3
+ARG PYTHON_VERSION=3.10
+ENV AIRFLOW_CONSTRAINTS_URL=https://raw.githubusercontent.com/apache/airflow/constraints-${AIRFLOW_VERSION}/constraints-${PYTHON_VERSION}.txt
 
 # Instala primeiro como root (em imagens do Airflow isso já acerta o venv usado)
 RUN set -eux; \
@@ -61,10 +65,10 @@ RUN set -eux; \
         echo "pip install attempt $attempt/$max_retries"; \
         if python -m pip install --no-cache-dir -U pip --timeout 120 && \
            python -m pip install --no-cache-dir -U certifi --timeout 120 && \
-           python -m pip install --no-cache-dir -r /requirements.txt --timeout 120; then \
+           python -m pip install --no-cache-dir -r /requirements.txt --constraint ${AIRFLOW_CONSTRAINTS_URL} --timeout 120; then \
             # If tests-requirements.txt exists, install it too (provides pytest and friends)
             if [ -f /tests-requirements.txt ]; then \
-                python -m pip install --no-cache-dir -r /tests-requirements.txt --timeout 120 || true; \
+                python -m pip install --no-cache-dir -r /tests-requirements.txt --constraint ${AIRFLOW_CONSTRAINTS_URL} --timeout 120 || true; \
             fi; \
             echo "pip install succeeded on attempt $attempt"; \
             break; \
