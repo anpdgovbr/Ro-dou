@@ -1,5 +1,5 @@
 # Ajuste a tag base se você usa outra (mantenha a MESMA base p/ webserver e scheduler)
-FROM apache/airflow:2.9.3-python3.10
+FROM harbor.anpd.gov.br/library/airflow:2.9.3-python3.10
 
 # Nota: mantenha a mesma base para webserver e scheduler para evitar
 # incompatibilidades entre containers.

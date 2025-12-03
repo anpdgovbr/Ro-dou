@@ -9,6 +9,11 @@ COMPOSE := $(shell command -v docker-compose >/dev/null 2>&1 && echo docker-comp
 # Usa condicionais make para garantir que PROJECT nunca fique vazio.
 PROJECT ?= $(if $(COMPOSE_PROJECT_NAME),$(COMPOSE_PROJECT_NAME),ro-dou)
 
+# Nome/tag da imagem a ser publicada no Harbor
+IMAGE_REPO ?= harbor.anpd.gov.br/library/ro-dou
+IMAGE_TAG ?= anpd-latest
+export AIRFLOW_IMAGE_NAME ?= $(IMAGE_REPO):$(IMAGE_TAG)
+
 # Timeout (seconds) for wait-web loop; can be overridden in environment
 WAIT_WEB_TIMEOUT ?= 60
 
@@ -53,6 +58,10 @@ run: \
 .PHONY: build-images
 build-images:
 	$(COMPOSE) $(DEV_PROFILE_ARG) -p $(PROJECT) build airflow-webserver airflow-scheduler
+
+.PHONY: push-images
+push-images: build-images
+	$(COMPOSE) $(DEV_PROFILE_ARG) -p $(PROJECT) push airflow-webserver airflow-scheduler
 
 create-logs-dir:
 	mkdir -p ./mnt/airflow-logs -m a=rwx

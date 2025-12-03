@@ -36,6 +36,7 @@
 # Compose spec version field is deprecated in newer Compose implementations.
 
 x-airflow-common: &airflow-common
+  image: ${AIRFLOW_IMAGE_NAME:-harbor.anpd.gov.br/library/ro-dou:anpd-latest}
   build:
     context: .
     dockerfile: docker/airflow-common.Dockerfile
@@ -110,7 +111,7 @@ x-airflow-common: &airflow-common
 
 services:
   postgres:
-    image: postgres:17.5-alpine
+    image: harbor.anpd.gov.br/library/postgres:17.5-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -144,7 +145,7 @@ services:
     restart: always
 
   smtp4dev:
-    image: rnwood/smtp4dev:v3
+    image: harbor.anpd.gov.br/library/smtp4dev:v3
     profiles: ["dev"]
     restart: always
     ports:
