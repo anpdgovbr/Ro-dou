@@ -277,20 +277,37 @@ class DOUSearcher(BaseSearcher):
                     field=field,
                     is_exact_search=is_exact_search,
                 )
-            except:
+            except Exception as exc:  # pylint: disable=broad-except
                 import requests
                 # If the underlying error is SSL related, don't retry — likely permanent
-                exc_type, exc_value, _ = sys.exc_info()
-                if isinstance(exc_value, requests.exceptions.SSLError):
-                    logging.error("SSL error encountered for term '%s' — aborting retries: %s", search_term, exc_value)
+                if isinstance(exc, requests.exceptions.SSLError):
+                    logging.error(
+                        "SSL error encountered for term '%s' — aborting retries: %s",
+                        search_term,
+                        exc,
+                    )
                     raise
 
                 if retry > max_retries:
-                    logging.error("Error - Max retries reached")
+                    logging.error(
+                        "Error - Max retries reached for term '%s'. Last error (%s): %s",
+                        search_term,
+                        type(exc).__name__,
+                        exc,
+                    )
                     raise
 
-                logging.info("Attempt %s of %s for term '%s'", retry, max_retries, search_term)
-                logging.info("Sleeping for 30 seconds before retry dou_hook.search_text().")
+                logging.warning(
+                    "Attempt %s of %s for term '%s' failed (%s): %s",
+                    retry,
+                    max_retries,
+                    search_term,
+                    type(exc).__name__,
+                    exc,
+                )
+                logging.info(
+                    "Sleeping for 30 seconds before retry dou_hook.search_text()."
+                )
                 time.sleep(30)
                 retry += 1
 

@@ -39,6 +39,15 @@ class DOUHook(BaseHook):
         Section.TODOS.value: "Todas",
     }
 
+    DEFAULT_HEADERS = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/120.0.0.0 Safari/537.36"
+        ),
+        "Accept": "application/json",
+    }
+
     def __init__(self, *args, **kwargs):
         pass
 
@@ -56,18 +65,51 @@ class DOUHook(BaseHook):
             return f"{field.value}-{term}"
 
     def _request_page(self, with_retry: bool, payload: dict):
+        """
+        Fetches a search page from the DOU endpoint, adding a browser User-Agent
+        to avoid being served alternate/error responses. Retries once on
+        connection errors when allowed so upstream retry logic can continue.
+        """
         try:
-            return requests.get(self.IN_API_BASE_URL, params=payload, timeout=100)
+            response = requests.get(
+                self.IN_API_BASE_URL,
+                params=payload,
+                headers=self.DEFAULT_HEADERS,
+                timeout=30,
+            )
+            logging.info(
+                "DOU request status %s for query '%s' date %s-%s",
+                response.status_code,
+                payload.get("q"),
+                payload.get("publishFrom"),
+                payload.get("publishTo"),
+            )
+            response.raise_for_status()
+            return response
         except requests.exceptions.SSLError as e:
-            # SSL errors are unlikely to be fixed by retrying; propagate immediately
             logging.error("SSL error when requesting DOU API: %s", e)
             raise
-        except requests.exceptions.ConnectionError:
+        except requests.exceptions.ConnectionError as exc:
             if with_retry:
                 logging.info("Sleep for 30 seconds before retry requests.get().")
                 time.sleep(30)
-                return requests.get(self.IN_API_BASE_URL, params=payload, timeout=100)
-            # If no retry requested, propagate to caller
+                return requests.get(
+                    self.IN_API_BASE_URL,
+                    params=payload,
+                    headers=self.DEFAULT_HEADERS,
+                    timeout=30,
+                )
+            raise
+        except requests.exceptions.HTTPError as exc:
+            # Surface the body to help diagnose block pages or markup changes
+            logging.error(
+                "HTTP error requesting DOU API (status %s): %s",
+                getattr(exc.response, "status_code", "unknown"),
+                exc,
+            )
+            preview = getattr(exc.response, "text", "")[:1000]
+            if preview:
+                logging.info("DOU response preview: %s", preview)
             raise
 
 
@@ -151,7 +193,21 @@ class DOUHook(BaseHook):
             script_tag = soup.find(
                 "script", id="_br_com_seatecnologia_in_buscadou_BuscaDouPortlet_params"
             )
-            search_results = json.loads(script_tag.contents[0])["jsonArray"]
+            if script_tag is None:
+                logging.error(
+                    "Script tag '_br_com_seatecnologia_in_buscadou_BuscaDouPortlet_params' not found in DOU response."
+                )
+                logging.info("HTML content preview (2000 chars): %s", page.content[:2000])
+                raise ValueError(
+                    "Unable to find search results in DOU response. The DOU API may have changed its structure."
+                )
+
+            try:
+                search_results = json.loads(script_tag.contents[0])["jsonArray"]
+            except Exception as exc:  # pylint: disable=broad-except
+                logging.error("Failed to parse DOU script tag contents: %s", exc)
+                logging.info("Script tag content preview (1000 chars): %s", script_tag.text[:1000])
+                raise
 
             if search_results:
                 for content in search_results:
