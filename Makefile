@@ -18,8 +18,9 @@ export AIRFLOW_IMAGE_NAME ?= $(IMAGE_REPO):$(IMAGE_TAG)
 WAIT_WEB_TIMEOUT ?= 60
 
 # Profile usado para serviços opcionais de desenvolvimento (ex.: smtp4dev)
-# Defina DEV_PROFILE= (vazio) para desabilitar por padrão
-DEV_PROFILE ?= dev
+# Defina DEV_PROFILE=dev para habilitar serviços opcionais (ex.: smtp4dev).
+# Por padrão fica vazio para não subir extras em ambientes “não-dev”.
+DEV_PROFILE ?=
 DEV_PROFILE_ARG := $(if $(DEV_PROFILE),--profile $(DEV_PROFILE),)
 
 # Ensure docker is installed early
