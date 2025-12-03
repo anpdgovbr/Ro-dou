@@ -57,7 +57,7 @@ class DOUHook(BaseHook):
 
     def _request_page(self, with_retry: bool, payload: dict):
         try:
-            return requests.get(self.IN_API_BASE_URL, params=payload, timeout=10)
+            return requests.get(self.IN_API_BASE_URL, params=payload, timeout=100)
         except requests.exceptions.SSLError as e:
             # SSL errors are unlikely to be fixed by retrying; propagate immediately
             logging.error("SSL error when requesting DOU API: %s", e)
@@ -66,7 +66,7 @@ class DOUHook(BaseHook):
             if with_retry:
                 logging.info("Sleep for 30 seconds before retry requests.get().")
                 time.sleep(30)
-                return requests.get(self.IN_API_BASE_URL, params=payload, timeout=10)
+                return requests.get(self.IN_API_BASE_URL, params=payload, timeout=100)
             # If no retry requested, propagate to caller
             raise
 
