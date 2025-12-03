@@ -55,6 +55,13 @@ run: \
 	create-inlabs-portal-connection \
 	activate-inlabs-load-dag
 
+# Sobe usando a imagem já existente (sem rebuild). Útil quando a tag já foi publicada no Harbor.
+.PHONY: up-no-build
+up-no-build: \
+	create-logs-dir \
+	setup-containers \
+	wait-web
+
 .PHONY: build-images
 build-images:
 	$(COMPOSE) $(DEV_PROFILE_ARG) -p $(PROJECT) build airflow-webserver airflow-scheduler
